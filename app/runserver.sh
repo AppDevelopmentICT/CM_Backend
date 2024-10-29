@@ -1,4 +1,4 @@
 #!/bin/bash
 
-source ../venv/bin/activate
-uvicorn main:app --reload --host 0.0.0.0 --port 2100
+source ../venv/Script/activate
+uvicorn main:app --reload --host 0.0.0.0 --port 5000

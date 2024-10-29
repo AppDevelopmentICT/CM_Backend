@@ -30,8 +30,8 @@ async def reject_project(id: str, user_id: Annotated[str, Header()]):
     return reject_project_response
 
 @project_router.get('/project', tags=['Project'])
-async def get_project_list(user: Annotated[Union[str, None], Header()] = None):
-    get_project_list_response = ProjectService.get_project_list(user)
+async def get_project_list(user: Annotated[Union[str, None], Header()] = None, page: int = 1):
+    get_project_list_response = ProjectService.get_project_list(user, page)
     return get_project_list_response
 
 @project_router.get('/project/{id}', tags=['Project'])

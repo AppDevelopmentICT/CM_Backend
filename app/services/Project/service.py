@@ -119,11 +119,12 @@ async def submit_project(id, user_token):
         conn.close()
         return JSONResponse({"message": "Error while adding new data", "error": str(err)}, status_code=500)
 
-def get_project_list(user):
+def get_project_list(user, page):
     conn = create_connection()
     cursor = conn.cursor()
     verify_sales = check_is_user_sales(user)
     data = []
+    total_rows = 0
 
     try:
         if verify_sales:
@@ -197,8 +198,21 @@ def get_project_list(user):
                     status_code=500
                 )
 
+        if page == 1:
+            try:
+                cursor.execute(
+                    """
+                    SELECT COUNT(project_id) from project
+                    """
+                )
+                total_rows = cursor.fetchone()[0]
+            except Exception as err:
+                return JSONResponse(
+                    {"message": "Error while fetching project data", "error": str(err)},
+                    status_code=500
+                )
         conn.close()
-        return JSONResponse({"data": data}, status_code=200)
+        return JSONResponse({"total_rows": total_rows, "data": data}, status_code=200)
 
     except Exception as err:
         return JSONResponse(
