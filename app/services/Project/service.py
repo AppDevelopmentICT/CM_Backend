@@ -144,7 +144,6 @@ def get_project_list(user, page):
                 WHERE sales_person = %s 
                   AND project.status IN ('Pending', 'Approved', 'Rejected')
                 ORDER BY project.created_at DESC
-                LIMIT 10
                 """, (user,)
             )
         else:
@@ -162,7 +161,6 @@ def get_project_list(user, page):
                 INNER JOIN users ON project.sales_person = users.id
                 INNER JOIN customer ON project.customer_id = customer.customer_id
                 ORDER BY project.created_at DESC
-                LIMIT 10
                 """
             )
 
