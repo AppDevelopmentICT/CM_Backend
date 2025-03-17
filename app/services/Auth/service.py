@@ -36,6 +36,7 @@ def login(body: dict):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE email=%s", (body['email'],))
     user = cursor.fetchone()
+    
     if user is None:
         return JSONResponse({"message": "User Not Found"}, status_code=204)
     
@@ -56,6 +57,7 @@ def login(body: dict):
 
 def get_user(auth_token: str):
     user_id = decode_jwt(auth_token)
+    print(user_id)
     conn = create_connection()
     cursor = conn.cursor()
     
@@ -66,6 +68,7 @@ def get_user(auth_token: str):
             """, (user_id, )
         )
         data = cursor.fetchone()
+        print(data)
         return JSONResponse({
             "id": user_id,
             "username": data[1],

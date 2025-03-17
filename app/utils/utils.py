@@ -5,6 +5,7 @@ from .database import create_connection
 from fastapi.responses import JSONResponse
 from utils.environment import *
 from jinja2 import Environment, FileSystemLoader
+from utils.utils import SECRET_KEY, ALGORITHM
 
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -48,6 +49,15 @@ def decode_jwt(token: str):
     try:
         decoded_token = jwt.decode(token, options={"verify_signature": False})
         return decoded_token["id"]
+    except InvalidTokenError as e:
+        print(f"Token is invalid: {e}")
+    except Exception as e:
+        return False
+    
+def encode_jwt(payload: dict):
+    try:
+        encoded_token = jwt.encode(payload, key=SECRET_KEY, algorithm=ALGORITHM)
+        return encoded_token
     except InvalidTokenError as e:
         print(f"Token is invalid: {e}")
     except Exception as e:

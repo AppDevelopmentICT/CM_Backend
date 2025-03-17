@@ -1,8 +1,21 @@
 from fastapi import APIRouter, Header
 from . import schema, service as ProjectService
 from typing import Annotated, Union
+import smtplib
 
 project_router = APIRouter()
+
+@project_router.post('/project/mail', tags=['Project'])
+async def send_email(request: schema.SendEmail):
+    data = 'data'
+    send_email_response = await ProjectService.send_email(
+        request.email_subject, 
+        request.receiver, 
+        # request.data,
+        data,
+        request.template,
+    )
+    return send_email_response
 
 @project_router.post('/project', tags=['Project'])
 async def add_project(request: schema.Project, user_token: Annotated[str, Header()]):
@@ -34,10 +47,25 @@ async def get_project_list(user: Annotated[Union[str, None], Header()] = None, p
     get_project_list_response = ProjectService.get_project_list(user, page)
     return get_project_list_response
 
+@project_router.get('/project/export', tags=['Project'])
+async def get_project_export_data():
+    get_project_export_list_response = ProjectService.get_project_export_data()
+    return get_project_export_list_response
+
+@project_router.post('/project/import', tags=['Project'])
+async def add_project(request: schema.Project, user_token: Annotated[str, Header()]):
+    add_project_response = await ProjectService.import_project(request, user_token)
+    return add_project_response
+
 @project_router.get('/project/{id}', tags=['Project'])
 async def get_project_by_id(id: str):
     get_project_by_id_response = ProjectService.get_project_by_id(id)
     return get_project_by_id_response
+
+@project_router.delete('/project/{id}', tags=['Project'])
+async def delete_project_by_id(id: str):
+    delete_project_by_id_response = ProjectService.delete_project_by_id(id)
+    return delete_project_by_id_response
 
 @project_router.get('/project/status/{status}', tags=['Project'])
 async def get_pending_project(status: str):

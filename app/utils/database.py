@@ -18,7 +18,7 @@ def create_connection():
         user=DB_USER,
         password=DB_PASSWORD,
     )
-    # with connection.cursor() as cur:
-    #     cur.execute("SET search_path TO public;")
+    with connection.cursor() as cur:
+        cur.execute("SET search_path TO public_testing;")
     
     return connection

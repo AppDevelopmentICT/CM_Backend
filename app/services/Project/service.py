@@ -1,7 +1,10 @@
 import uuid
+import smtplib
 from jinja2 import Environment, FileSystemLoader
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
-
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from utils.environment import MAIL_FROM, MAIL_SERVER, MAIL_PORT
 from utils.utils import check_is_user_sales
 from utils.database import create_connection
 from fastapi.responses import JSONResponse
@@ -10,10 +13,43 @@ from utils.environment import *
 from services.AuditLog.services import add_log
 from utils.utils import decode_jwt
 
-async def send_email(email_subject: str, receiver: list[str], data, template: int):
-    print(receiver)
+# async def send_email(email_subject: str, receiver: list[str], data, template: int):
+#     print(receiver)
+#     env = Environment(loader=FileSystemLoader("./template/"))
+#     print(env.get_template)
+#     if template == 1:
+#         template = env.get_template("assigned_template.html")
+#     elif template == 2:
+#         template = env.get_template("project_updated.html")
+#     elif template == 3:
+#         template = env.get_template("project_responded.html")
+#     else:
+#         raise ValueError("Invalid template number provided.")
+#     html_content = template.render(data=data)
+#     conf = ConnectionConfig(
+#         MAIL_USERNAME = MAIL_USERNAME,
+#         MAIL_PASSWORD = MAIL_PASSWORD,
+#         MAIL_FROM = MAIL_FROM,
+#         MAIL_PORT = MAIL_PORT,
+#         MAIL_SERVER = MAIL_SERVER,
+#         MAIL_STARTTLS = True,
+#         MAIL_SSL_TLS = False,
+#         USE_CREDENTIALS = True,
+#         VALIDATE_CERTS = True
+#     )
+#     message = MessageSchema(
+#         subject=email_subject,
+#         recipients=receiver, #TODO: Add Helpdesk Email
+#         body=html_content,
+#         subtype=MessageType.html)
+
+#     fm = FastMail(conf)
+#     await fm.send_message(message)
+
+async def send_email(email_subject: str, receiver: list[str], data: dict, template: int):
     env = Environment(loader=FileSystemLoader("./template/"))
-    print(env.get_template)
+    
+    # Choose the correct template
     if template == 1:
         template = env.get_template("assigned_template.html")
     elif template == 2:
@@ -22,26 +58,25 @@ async def send_email(email_subject: str, receiver: list[str], data, template: in
         template = env.get_template("project_responded.html")
     else:
         raise ValueError("Invalid template number provided.")
+    
     html_content = template.render(data=data)
-    conf = ConnectionConfig(
-        MAIL_USERNAME = MAIL_USERNAME,
-        MAIL_PASSWORD = MAIL_PASSWORD,
-        MAIL_FROM = MAIL_FROM,
-        MAIL_PORT = MAIL_PORT,
-        MAIL_SERVER = MAIL_SERVER,
-        MAIL_STARTTLS = True,
-        MAIL_SSL_TLS = False,
-        USE_CREDENTIALS = True,
-        VALIDATE_CERTS = True
-    )
-    message = MessageSchema(
-        subject=email_subject,
-        recipients=receiver, #TODO: Add Helpdesk Email
-        body=html_content,
-        subtype=MessageType.html)
-
-    fm = FastMail(conf)
-    await fm.send_message(message)
+    print(", ".join(receiver))
+    # Set up email MIME structure
+    msg = MIMEMultipart()
+    msg['From'] = "arief.maehendrayuga@infracom-tech.com"  # Replace with your Outlook email
+    msg['To'] = ", ".join(receiver)
+    msg['Subject'] = email_subject
+    msg.attach(MIMEText(html_content, "html"))
+    
+    try:
+        # Connect to the SMTP server and send the email
+        with smtplib.SMTP("smtp-mail.outlook.com", port=587) as server:
+            server.starttls()  # Upgrade the connection to secure
+            server.login("arief.maehendrayuga@infracom-tech.com", "Prabu.kareem")  # Replace with your credentials
+            server.sendmail(msg['From'], receiver, msg.as_string())
+            print("Email sent successfully.")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
 
 async def add_project(request, user_token):
     conn = create_connection()
@@ -79,6 +114,51 @@ async def add_project(request, user_token):
     except Exception as err:
         conn.rollback()
         conn.close()
+        return JSONResponse({"message": "Error while adding new data", "error": str(err)}, status_code=500)
+
+async def import_project(request, user_token):
+    conn = create_connection()
+    cursor = conn.cursor()
+    project_id = str(uuid.uuid4())
+    current_datetime = datetime.now()
+    formatted_datetime = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM project WHERE cost_sheets = %s", (request.cost_sheets,))
+        cost_sheet_count = cursor.fetchone()[0]
+
+        if cost_sheet_count > 0:
+            return JSONResponse({"message": "Duplicate cost sheet found."}, status_code=400)
+        
+        cursor.execute("SELECT COUNT(*) FROM project WHERE contract_number = %s", (request.contract_number,))
+        contract_number_count = cursor.fetchone()[0]
+
+        if contract_number_count > 0:
+            return JSONResponse({"message": "Duplicate contract number found."}, status_code=400)
+        
+        cursor.execute(
+            """
+            INSERT INTO project(project_id, customer_id, created_by, cost_sheets, project_name, 
+            project_type, description, contract_number, internal_cost, selling_prices, sales_person, 
+            status, created_at, on_site_engineer, approved_by)
+            VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (project_id, request.customer_id, request.created_by, request.cost_sheets, 
+                  request.project_name, request.project_type, request.description, 
+                  request.contract_number, request.internal_cost, request.selling_prices, 
+                  request.sales_person, request.project_status, formatted_datetime, request.on_site_engineer, None)
+        )    
+
+        conn.commit()
+        conn.close()
+        
+        user_id = decode_jwt(user_token)
+        add_log(user_id, action_type="POST/CREATE", action_detail="Added new project entry with project name '" + request.project_name + "'", entity_name="Project")
+
+        return JSONResponse({"message": f"{request.project_name} has been added to project list", "project_id": project_id}, status_code=201)
+    except Exception as err:
+        conn.rollback()
+        conn.close()
+        
         return JSONResponse({"message": "Error while adding new data", "error": str(err)}, status_code=500)
 
 async def submit_project(id, user_token):
@@ -144,7 +224,6 @@ def get_project_list(user, page):
                 WHERE sales_person = %s 
                   AND project.status IN ('Pending', 'Approved', 'Rejected')
                 ORDER BY project.created_at DESC
-                LIMIT 10
                 """, (user,)
             )
         else:
@@ -162,7 +241,6 @@ def get_project_list(user, page):
                 INNER JOIN users ON project.sales_person = users.id
                 INNER JOIN customer ON project.customer_id = customer.customer_id
                 ORDER BY project.created_at DESC
-                LIMIT 10
                 """
             )
 
@@ -220,9 +298,152 @@ def get_project_list(user, page):
             status_code=500
         )
 
+def get_project_export_data():
+    conn = create_connection()
+    cursor = conn.cursor()
+    data = []
+    total_rows = 0
+
+    try:
+        cursor.execute(
+            """
+            SELECT 
+                customer.customer_fullname,
+                users.username,
+                COALESCE(project.cost_sheets, 'N/A') AS cost_sheets,
+                project.project_name,
+                project.project_type,
+                project.contract_number,
+                project.internal_cost,
+                project.selling_prices,
+                project.on_site_engineer,
+                product.product_category,
+                principal.principal_name,
+                product.product_name,
+                product.serial_number,
+                product.si_number,
+                product.quantity,
+                product.start_date,
+                product.end_date,
+                preventive_maintenance.pm_by,
+                preventive_maintenance.start_date,
+                preventive_maintenance.end_date,
+                preventive_maintenance.pm_periode,
+                preventive_maintenance.quantity,
+                corrective_maintenance.cm_by,
+                corrective_maintenance.start_date,
+                corrective_maintenance.end_date,
+                corrective_maintenance.quantity,
+                implementation_table.implementation_type,
+                implementation_table.start_date,
+                implementation_table.end_date,
+                sla_table.severity_1_response_time,
+                sla_table.severity_1_resolution_time,
+                sla_table.severity_2_response_time,
+                sla_table.severity_2_resolution_time,
+                sla_table.severity_3_response_time,
+                sla_table.severity_3_resolution_time,
+                sla_table.severity_4_response_time,
+                sla_table.severity_4_resolution_time,
+                project.description,
+                project.created_at
+            FROM (
+                SELECT DISTINCT product_id
+                FROM product
+            ) p
+            INNER JOIN product ON p.product_id = product.product_id
+            LEFT JOIN preventive_maintenance 
+                ON product.preventive_maintenance = preventive_maintenance.pm_id
+            LEFT JOIN corrective_maintenance 
+                ON product.corrective_maintenance = corrective_maintenance.cm_id
+            LEFT JOIN implementation_table 
+                ON product.implementation_id = implementation_table.implementation_id
+            LEFT JOIN sla_table 
+                ON product.sla_id = sla_table.sla_id
+            INNER JOIN principal 
+                ON product.principal_id = principal.principal_id
+            LEFT JOIN project 
+                ON product.project_id = project.project_id
+            INNER JOIN users 
+                ON project.sales_person = users.id
+            INNER JOIN customer 
+                ON project.customer_id = customer.customer_id
+            ORDER BY project.created_at DESC
+            """,
+        )
+        project_raw_data = cursor.fetchall()
+
+        for project in project_raw_data:
+            data.append({
+                "customer_name": project[0],
+                "sales_name": project[1],
+                "cost_sheet": project[2],
+                "project_name": project[3],
+
+                "project_type": project[4],
+                "contract_number": project[5],
+                "internal_cost": project[6],
+                "selling_cost": project[7],
+                "managed_service": project[8],
+
+                "product_type": project[9],
+                "product_brand": project[10],
+                "product_name": project[11],
+                "serial_number": project[12],
+                "si_number": project[13],
+                "product_quantity": project[14],
+                "product_start_date": str(project[15]),
+                "product_end_date": str(project[16]),
+
+                "pm_by": project[17],
+                "pm_start_date": str(project[18]),
+                "pm_end_date": str(project[19]),
+                "maintenance_period": project[20],
+                "pm_quantity": project[21],
+                
+                "cm_by": project[22],
+                "cm_start_date": str(project[23]),
+                "cm_end_date": str(project[24]),
+                "cm_quantity": project[25],
+                
+                "i_by": project[26],
+                "i_start_date": str(project[27]),
+                "i_end_date": str(project[28]),
+                
+                # sla
+                "severity1_response_time": project[29],
+                "severity1_resolution_time": project[30],
+                "severity2_response_time": project[31],
+                "severity2_resolution_time": project[32],
+                "severity3_response_time": project[33],
+                "severity3_resolution_time": project[34],
+                "severity4_response_time": project[35],
+                "severity4_resolution_time": project[36],
+                
+                "project_description": project[37],
+                "created_date": str(project[38]),
+            })
+
+        cursor.execute(
+            """
+            SELECT COUNT(project_id) from project
+            """
+        )
+        total_rows = cursor.fetchone()[0]
+            
+        conn.close()
+        return JSONResponse({"total_rows": total_rows, "data": data}, status_code=200)
+
+    except Exception as err:
+        return JSONResponse(
+            {"message": "Error while fetching project export data", "error": str(err)},
+            status_code=500
+        )
+    
 def get_project_by_id(id):
     conn = create_connection()
     cursor = conn.cursor()
+    
     try:
         cursor.execute(
             """
@@ -323,6 +544,51 @@ def get_project_by_id(id):
         return JSONResponse({"data": data}, status_code=200)
     except Exception as err:
         return JSONResponse({"message": "Error while fetch project data", "error": str(err)}, status_code=500)
+
+def delete_project_by_id(id):
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT project.*
+            FROM project
+            WHERE project.project_id = %s
+            """,
+            (id,),
+        )
+        project_temp_data = cursor.fetchone()
+
+        if not project_temp_data:
+            return JSONResponse({"message": "Project not found"}, status_code=404)
+
+        # Delete product data
+        cursor.execute("DELETE FROM product WHERE project_id = %s", (id,))
+        
+        # Delete the project
+        cursor.execute("DELETE FROM project WHERE project_id = %s", (id,))
+
+        conn.commit()
+        conn.close()
+
+        return JSONResponse(
+            {
+                "message": "Project and associated product data deleted successfully",
+            },
+            status_code=200,
+        )
+    except Exception as err:
+        # Rollback the transaction in case of error
+        conn.rollback()
+        return JSONResponse(
+            {"message": "Error while deleting project or product data", "error": str(err)},
+            status_code=500,
+        )
+    finally:
+        # Ensure connection is always closed
+        if conn:
+            conn.close()
 
 async def update_project(request, id, user_token):
     conn = create_connection()
@@ -437,7 +703,8 @@ async def approve_project(id, user_id):
                 "status": "Approved"
             } 
             # TODO: Tambahin CS
-            await send_email("Project has beed approved", [temp_data[6],'alvin.matthew@infracom-tech.com'], data, template=3)
+            print(temp_data[6])
+            await send_email("Project has beed approved", [temp_data[6],'alvin.matthew@infracom-tech.com', 'helpdesk@infracom-tech.com'], data, template=3)
         except Exception as err:
             return JSONResponse({"message": "Error while edit approved data", "error": str(err)}, status_code=500)
         conn.commit()

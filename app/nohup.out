@@ -1,0 +1,4 @@
+INFO:     Will watch for changes in these directories: ['/home/ictdev/Internal_Apps/Contract_Management/UpdatedBackend/app']
+ERROR:    [Errno 98] Address already in use
+INFO:     Will watch for changes in these directories: ['/home/ictdev/Internal_Apps/Contract_Management/UpdatedBackend/app']
+ERROR:    [Errno 98] Address already in use

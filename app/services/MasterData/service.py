@@ -3,7 +3,7 @@ import requests
 
 from . import schema
 from fastapi.responses import JSONResponse
-from utils.utils import decode_jwt
+from utils.utils import decode_jwt, encode_jwt
 from utils.database import create_connection
 from utils.environment import POCKETBASE
 from services.AuditLog.services import add_log
@@ -185,10 +185,15 @@ def get_user_by_email(email: str):
             """, (email,)
         )
         user = cursor.fetchone()
+        payload = {
+            'id': user[0],
+            'roles': user[4]
+        }
         data = {
-                'user_id': user[0],
-                'user_roles': user[4]
-            }
+            'user_id': user[0],
+            'user_roles': user[4],
+            'user_token': encode_jwt(payload)
+        }
         add_log(user[0], action_type="LOGIN", action_detail="Logged into website", entity_name="User")
         conn.close()
         return JSONResponse({"data": data}, status_code=200)
