@@ -1,5 +1,5 @@
 import jwt
-import pyotp
+# import pyotp
 import requests
 
 from datetime import datetime, timedelta
@@ -77,18 +77,18 @@ def get_user(auth_token: str):
     except Exception as e:
         return JSONResponse({"message": "Failed getting user data", "error": e}, status_code=400)
 
-def get_key():
-    otp = pyotp.random_base32()
-    return otp
+# def get_key():
+#     otp = pyotp.random_base32()
+#     return otp
 
 # TODO: Add error handling
 def get_user_key(id):
     user_data = requests.get(POCKETBASE+f"/api/collections/users/records/{id}")
     return user_data.json()['secret_key']
 
-def verify_otp(request, secret_key):
-    totp = pyotp.TOTP(secret_key)
-    if totp.now() == str(request.input_otp):
-        return JSONResponse({"message": "Succesfull Login"}, status_code=200)
-    else:
-        return JSONResponse({"message": "OTP not verified"}, status_code=401)
+# def verify_otp(request, secret_key):
+#     totp = pyotp.TOTP(secret_key)
+#     if totp.now() == str(request.input_otp):
+#         return JSONResponse({"message": "Succesfull Login"}, status_code=200)
+#     else:
+#         return JSONResponse({"message": "OTP not verified"}, status_code=401)

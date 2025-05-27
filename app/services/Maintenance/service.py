@@ -7,6 +7,10 @@ from datetime import datetime
 def add_maintenance_data(request, project_id):
     conn = create_connection()
     cursor = conn.cursor()
+    cmId = str(uuid.uuid4())
+    pmId = str(uuid.uuid4())
+    slaId = str(uuid.uuid4())
+    implementationId = str(uuid.uuid4())
     try:
         if not request.preventive_maintenance == None:
             try:
@@ -24,7 +28,7 @@ def add_maintenance_data(request, project_id):
                         """
                         INSERT INTO preventive_maintenance (pm_id, pm_by, start_date, end_date, pm_periode, project_id, is_parent, quantity)
                         VALUES(%s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (str(uuid.uuid4()), request.preventive_maintenance.pm_by, request.preventive_maintenance.start_date, request.preventive_maintenance.end_date, 
+                        """, (pmId, request.preventive_maintenance.pm_by, request.preventive_maintenance.start_date, request.preventive_maintenance.end_date, 
                             request.preventive_maintenance.pm_periode, project_id, True, request.preventive_maintenance.quantity)
                     )
             except Exception as err:
@@ -45,7 +49,7 @@ def add_maintenance_data(request, project_id):
                         """
                         INSERT INTO corrective_maintenance (cm_id, cm_by, start_date, end_date, project_id, is_parent, quantity)
                         VALUES(%s, %s, %s, %s, %s, %s, %s)
-                        """, (str(uuid.uuid4()), request.corrective_maintenance.cm_by, request.corrective_maintenance.start_date, request.corrective_maintenance.end_date, 
+                        """, (cmId, request.corrective_maintenance.cm_by, request.corrective_maintenance.start_date, request.corrective_maintenance.end_date, 
                             project_id, True, request.corrective_maintenance.quantity)
                     )
             except Exception as err:
@@ -68,7 +72,7 @@ def add_maintenance_data(request, project_id):
                             sla_id, severity_1_response_time, severity_1_resolution_time, severity_2_response_time, severity_2_resolution_time, severity_3_response_time,
                             severity_3_resolution_time, severity_4_response_time, severity_4_resolution_time, project_id, is_parent)
                             VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, (str(uuid.uuid4()), request.sla.severity_1_response_time,
+                        """, (slaId, request.sla.severity_1_response_time,
                             request.sla.severity_1_resolution_time, request.sla.severity_2_response_time,
                             request.sla.severity_2_resolution_time, request.sla.severity_3_response_time,
                             request.sla.severity_3_resolution_time, request.sla.severity_4_response_time,
@@ -93,13 +97,13 @@ def add_maintenance_data(request, project_id):
                         """
                         INSERT INTO implementation_table (implementation_id, implementation_type, project_id, is_parent, start_date, end_date)
                         VALUES(%s, %s, %s, %s, %s, %s)
-                        """, (str(uuid.uuid4()), request.implementation.implementation_type, project_id, True, request.implementation.start_date, request.implementation.end_date)
+                        """, (implementationId, request.implementation.implementation_type, project_id, True, request.implementation.start_date, request.implementation.end_date)
                     )
             except Exception as err:
                 return JSONResponse({"message": "Error while adding implementation data", "error": str(err)}, status_code=500)
         conn.commit()
         conn.close()
-        return JSONResponse({"message": "Success add all maintenance data"}, status_code=201) 
+        return JSONResponse({"message": "Success add all maintenance data", "cm_id": cmId, "pm_id": pmId, "sla_id": slaId, "implementation_id": implementationId}, status_code=201) 
     except Exception as err:
         return JSONResponse({"message": "Error while adding data", "error": str(err)}, status_code=500)
 

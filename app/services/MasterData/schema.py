@@ -10,6 +10,7 @@ class User(BaseModel):
     username: str = Field(description="User's login name.", examples=['John'])
     isApprover: bool = Field(description="Indicates if the user has approver rights.", examples=[False])
     email: str = Field(description="User's email address.", examples=['john@infracom-tech.com'])
+    user_roles: str = Field(description="Roles assigned to the user.", examples=['Sales'])
     
 class CM_By(BaseModel):
     name: str = Field(description="Name of the Configuration Manager (CM) responsible for the project.", examples=['ICT'])

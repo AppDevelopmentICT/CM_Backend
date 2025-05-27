@@ -207,9 +207,9 @@ def update_user(id, request, user_token):
         cursor.execute(
             """
             UPDATE users
-            SET username=%s, isApprover=%s, email=%s
+            SET username=%s, isApprover=%s, email=%s, user_roles=%s
             WHERE id=%s
-            """, (request.username, request.isApprover, request.email, id)
+            """, (request.username, request.isApprover, request.email, request.user_roles, id)
         )
         conn.commit()
         conn.close()
@@ -610,6 +610,25 @@ def delete_principal(id, user_token):
         return JSONResponse({"message": "Data deleted"}, status_code=200)
     except Exception as err:
         return JSONResponse({"message": "Error while deleted data", "error": str(err)}, status_code=500)
+    
+def update_principal(request, id, user_token):
+    conn = create_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE principal
+            SET principal_name=%s
+            WHERE principal_id=%s
+            """, (request.principal_name,id)
+        )
+        conn.commit()
+        conn.close()
+        user_id = decode_jwt(user_token)
+        add_log(user_id, action_type="UPDATE", action_detail="Edited a brand from master data", entity_name="Brand")
+        return JSONResponse({"message": "Successful editting the data"}, status_code=200)
+    except Exception as err:
+        return JSONResponse({"message": "Error while edit customer master data", "error": str(err)}, status_code=500)
     
 def delete_user(id, user_token):
     conn = create_connection()

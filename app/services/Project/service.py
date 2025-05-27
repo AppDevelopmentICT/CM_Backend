@@ -298,79 +298,162 @@ def get_project_list(user, page):
             status_code=500
         )
 
-def get_project_export_data():
+def get_project_export_data(user_token):
     conn = create_connection()
     cursor = conn.cursor()
     data = []
     total_rows = 0
+    user_id = decode_jwt(user_token)
+
+    print(user_id)
+
+    cursor.execute(
+            """
+            SELECT id, user_roles FROM users WHERE id=%s
+            """, (user_id, )
+        )
+    user = cursor.fetchone()
+    user_id = user[0]
+    user_roles = user[1]
 
     try:
-        cursor.execute(
-            """
-            SELECT 
-                customer.customer_fullname,
-                users.username,
-                COALESCE(project.cost_sheets, 'N/A') AS cost_sheets,
-                project.project_name,
-                project.project_type,
-                project.contract_number,
-                project.internal_cost,
-                project.selling_prices,
-                project.on_site_engineer,
-                product.product_category,
-                principal.principal_name,
-                product.product_name,
-                product.serial_number,
-                product.si_number,
-                product.quantity,
-                product.start_date,
-                product.end_date,
-                preventive_maintenance.pm_by,
-                preventive_maintenance.start_date,
-                preventive_maintenance.end_date,
-                preventive_maintenance.pm_periode,
-                preventive_maintenance.quantity,
-                corrective_maintenance.cm_by,
-                corrective_maintenance.start_date,
-                corrective_maintenance.end_date,
-                corrective_maintenance.quantity,
-                implementation_table.implementation_type,
-                implementation_table.start_date,
-                implementation_table.end_date,
-                sla_table.severity_1_response_time,
-                sla_table.severity_1_resolution_time,
-                sla_table.severity_2_response_time,
-                sla_table.severity_2_resolution_time,
-                sla_table.severity_3_response_time,
-                sla_table.severity_3_resolution_time,
-                sla_table.severity_4_response_time,
-                sla_table.severity_4_resolution_time,
-                project.description,
-                project.created_at
-            FROM (
-                SELECT DISTINCT product_id
-                FROM product
-            ) p
-            INNER JOIN product ON p.product_id = product.product_id
-            LEFT JOIN preventive_maintenance 
-                ON product.preventive_maintenance = preventive_maintenance.pm_id
-            LEFT JOIN corrective_maintenance 
-                ON product.corrective_maintenance = corrective_maintenance.cm_id
-            LEFT JOIN implementation_table 
-                ON product.implementation_id = implementation_table.implementation_id
-            LEFT JOIN sla_table 
-                ON product.sla_id = sla_table.sla_id
-            INNER JOIN principal 
-                ON product.principal_id = principal.principal_id
-            LEFT JOIN project 
-                ON product.project_id = project.project_id
-            INNER JOIN users 
-                ON project.sales_person = users.id
-            INNER JOIN customer 
-                ON project.customer_id = customer.customer_id
-            ORDER BY project.created_at DESC
-            """,
-        )
+        if user_roles == 'Sales Admin' or user_roles == 'Helpdesk':
+            cursor.execute(
+                """
+                SELECT 
+                    customer.customer_fullname,
+                    users.username,
+                    COALESCE(project.cost_sheets, 'N/A') AS cost_sheets,
+                    project.project_name,
+                    project.project_type,
+                    project.contract_number,
+                    project.internal_cost,
+                    project.selling_prices,
+                    project.on_site_engineer,
+                    product.product_category,
+                    principal.principal_name,
+                    product.product_name,
+                    product.serial_number,
+                    product.si_number,
+                    product.quantity,
+                    product.start_date,
+                    product.end_date,
+                    preventive_maintenance.pm_by,
+                    preventive_maintenance.start_date,
+                    preventive_maintenance.end_date,
+                    preventive_maintenance.pm_periode,
+                    preventive_maintenance.quantity,
+                    corrective_maintenance.cm_by,
+                    corrective_maintenance.start_date,
+                    corrective_maintenance.end_date,
+                    corrective_maintenance.quantity,
+                    implementation_table.implementation_type,
+                    implementation_table.start_date,
+                    implementation_table.end_date,
+                    sla_table.severity_1_response_time,
+                    sla_table.severity_1_resolution_time,
+                    sla_table.severity_2_response_time,
+                    sla_table.severity_2_resolution_time,
+                    sla_table.severity_3_response_time,
+                    sla_table.severity_3_resolution_time,
+                    sla_table.severity_4_response_time,
+                    sla_table.severity_4_resolution_time,
+                    project.description,
+                    project.created_at
+                FROM (
+                    SELECT DISTINCT product_id
+                    FROM product
+                ) p
+                INNER JOIN product ON p.product_id = product.product_id
+                LEFT JOIN preventive_maintenance 
+                    ON product.preventive_maintenance = preventive_maintenance.pm_id
+                LEFT JOIN corrective_maintenance 
+                    ON product.corrective_maintenance = corrective_maintenance.cm_id
+                LEFT JOIN implementation_table 
+                    ON product.implementation_id = implementation_table.implementation_id
+                LEFT JOIN sla_table 
+                    ON product.sla_id = sla_table.sla_id
+                INNER JOIN principal 
+                    ON product.principal_id = principal.principal_id
+                LEFT JOIN project 
+                    ON product.project_id = project.project_id
+                INNER JOIN users 
+                    ON project.sales_person = users.id
+                INNER JOIN customer 
+                    ON project.customer_id = customer.customer_id
+                ORDER BY project.created_at DESC
+                """,
+            )
+            
+        else:
+            cursor.execute(
+                """
+                SELECT 
+                    customer.customer_fullname,
+                    users.username,
+                    COALESCE(project.cost_sheets, 'N/A') AS cost_sheets,
+                    project.project_name,
+                    project.project_type,
+                    project.contract_number,
+                    project.internal_cost,
+                    project.selling_prices,
+                    project.on_site_engineer,
+                    product.product_category,
+                    principal.principal_name,
+                    product.product_name,
+                    product.serial_number,
+                    product.si_number,
+                    product.quantity,
+                    product.start_date,
+                    product.end_date,
+                    preventive_maintenance.pm_by,
+                    preventive_maintenance.start_date,
+                    preventive_maintenance.end_date,
+                    preventive_maintenance.pm_periode,
+                    preventive_maintenance.quantity,
+                    corrective_maintenance.cm_by,
+                    corrective_maintenance.start_date,
+                    corrective_maintenance.end_date,
+                    corrective_maintenance.quantity,
+                    implementation_table.implementation_type,
+                    implementation_table.start_date,
+                    implementation_table.end_date,
+                    sla_table.severity_1_response_time,
+                    sla_table.severity_1_resolution_time,
+                    sla_table.severity_2_response_time,
+                    sla_table.severity_2_resolution_time,
+                    sla_table.severity_3_response_time,
+                    sla_table.severity_3_resolution_time,
+                    sla_table.severity_4_response_time,
+                    sla_table.severity_4_resolution_time,
+                    project.description,
+                    project.created_at
+                FROM (
+                    SELECT DISTINCT product_id
+                    FROM product
+                ) p
+                INNER JOIN product ON p.product_id = product.product_id
+                LEFT JOIN preventive_maintenance 
+                    ON product.preventive_maintenance = preventive_maintenance.pm_id
+                LEFT JOIN corrective_maintenance 
+                    ON product.corrective_maintenance = corrective_maintenance.cm_id
+                LEFT JOIN implementation_table 
+                    ON product.implementation_id = implementation_table.implementation_id
+                LEFT JOIN sla_table 
+                    ON product.sla_id = sla_table.sla_id
+                INNER JOIN principal 
+                    ON product.principal_id = principal.principal_id
+                LEFT JOIN project 
+                    ON product.project_id = project.project_id
+                INNER JOIN users 
+                    ON project.sales_person = users.id
+                INNER JOIN customer 
+                    ON project.customer_id = customer.customer_id
+                WHERE project.sales_person = %s
+                ORDER BY project.created_at DESC
+                """, (user_id, )
+            )
+
         project_raw_data = cursor.fetchall()
 
         for project in project_raw_data:
@@ -432,7 +515,7 @@ def get_project_export_data():
         total_rows = cursor.fetchone()[0]
             
         conn.close()
-        return JSONResponse({"total_rows": total_rows, "data": data}, status_code=200)
+        return JSONResponse({"total_rows": total_rows, "user": user_id ,"data": data}, status_code=200)
 
     except Exception as err:
         return JSONResponse(

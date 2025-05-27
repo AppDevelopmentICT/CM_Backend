@@ -79,6 +79,11 @@ async def delete_principal(id: str, user_token: Annotated[str, Header()]):
     delete_principal_response = APIServices.delete_principal(id, user_token)
     return delete_principal_response
 
+@master_data_router.patch('/principal/{id}', tags=['Principal'])
+async def update_principal(request: schema.Principal, id: str, user_token: Annotated[str, Header()] ):
+    update_principal_response = APIServices.update_principal(request, id, user_token)
+    return update_principal_response
+
 @master_data_router.get('/cm_by', tags=['Master Data'])
 async def get_cm_by():
     get_cm_by_response = APIServices.get_cm_by()

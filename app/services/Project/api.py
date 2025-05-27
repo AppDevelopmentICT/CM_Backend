@@ -48,8 +48,8 @@ async def get_project_list(user: Annotated[Union[str, None], Header()] = None, p
     return get_project_list_response
 
 @project_router.get('/project/export', tags=['Project'])
-async def get_project_export_data():
-    get_project_export_list_response = ProjectService.get_project_export_data()
+async def get_project_export_data(user_token: Annotated[str, Header()]):
+    get_project_export_list_response = ProjectService.get_project_export_data(user_token)
     return get_project_export_list_response
 
 @project_router.post('/project/import', tags=['Project'])

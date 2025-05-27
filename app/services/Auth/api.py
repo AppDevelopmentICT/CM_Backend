@@ -46,7 +46,7 @@ async def get_user_key(id: Annotated[str, Header(description="User request id")]
     get_key_response = AuthService.get_user_key(id)
     return get_key_response
 
-@auth_router.post('/verify-otp', tags=['Authorization'])
-async def verify_otp(request: schema.RequestOTP, secret_key: Annotated[str, Header(description="Secret Key")]):
-    verify_otp_response = AuthService.verify_otp(request, secret_key)
-    return verify_otp_response
+# @auth_router.post('/verify-otp', tags=['Authorization'])
+# async def verify_otp(request: schema.RequestOTP, secret_key: Annotated[str, Header(description="Secret Key")]):
+#     verify_otp_response = AuthService.verify_otp(request, secret_key)
+#     return verify_otp_response
