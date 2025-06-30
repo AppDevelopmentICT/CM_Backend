@@ -17,6 +17,7 @@ def create_connection():
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
+        sslmode="disable"
     )
     with connection.cursor() as cur:
         cur.execute("SET search_path TO public_testing;")
