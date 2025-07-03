@@ -63,16 +63,16 @@ async def send_email(email_subject: str, receiver: list[str], data: dict, templa
     print(", ".join(receiver))
     # Set up email MIME structure
     msg = MIMEMultipart()
-    msg['From'] = "arief.maehendrayuga@infracom-tech.com"  # Replace with your Outlook email
+    msg['From'] = MAIL_FROM  # Use environment variable
     msg['To'] = ", ".join(receiver)
     msg['Subject'] = email_subject
     msg.attach(MIMEText(html_content, "html"))
     
     try:
         # Connect to the SMTP server and send the email
-        with smtplib.SMTP("smtp-mail.outlook.com", port=587) as server:
+        with smtplib.SMTP(MAIL_SERVER, port=int(MAIL_PORT)) as server:
             server.starttls()  # Upgrade the connection to secure
-            server.login("arief.maehendrayuga@infracom-tech.com", "Prabu.kareem")  # Replace with your credentials
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)  # Use environment variables
             server.sendmail(msg['From'], receiver, msg.as_string())
             print("Email sent successfully.")
     except Exception as e:
